@@ -1,0 +1,13 @@
+{
+  "devMode" : false,
+  "currentUser": "TWITCH_DISPLAY_NAME",
+  "botInfos": {
+    "identity": {
+      "username": "BOT_ACCOUNT",
+      "password": "OAUTH_KEY"
+    },
+    "channels": [
+      "TWITCH_CHANNEL"
+    ]
+  },
+}
