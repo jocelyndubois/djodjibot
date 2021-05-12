@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Générique</title>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/endcredits.css">
+
+    <script
+            src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+            crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="wrapper">
+    <div id="titles">
+        <div id="credits">
+            <div id="the-end">Le peuple du Royaume</div>
+            <br />
+            <h1>Royaume</h1>
+            <dl>
+                <dt>Roi/Reine</dt>
+                <dd id="king">-</dd>
+                <dt>Habitant·e·s du royaume</dt>
+                <dd id="total-players">0</dd>
+            </dl>
+            <div class="clearfix"></div>
+            <h1>Royaume de l'Eau</h1>
+            <dl id="water-dl">
+                <dt>Maître·sse</dt>
+                <dd><span id="water-master"></span> (Niveau <span id="water-master-level">0</span>)</dd>
+            </dl>
+            <div class="clearfix"></div>
+            <h1>Royaume du Feu</h1>
+            <dl id="fire-dl">
+                <dt>Maître·sse</dt>
+                <dd><span id="fire-master"></span> (Niveau <span id="fire-master-level">0</span>)</dd>
+            </dl>
+            <div class="clearfix"></div>
+            <h1>Royaume de la Terre</h1>
+            <dl id="earth-dl">
+                <dt>Maître·sse</dt>
+                <dd><span id="earth-master"></span> (Niveau <span id="earth-master-level">0</span>)</dd>
+            </dl>
+            <div class="clearfix"></div>
+            <h1>Royaume de l'Air</h1>
+            <dl id="air-dl">
+                <dt>Maître·sse</dt>
+                <dd><span id="air-master"></span> (Niveau <span id="air-master-level">0</span>)</dd>
+            </dl>
+            <div class="clearfix"></div>
+            <h1>Royaume de la Lumière</h1>
+            <dl id="light-dl">
+                <dt>Maître·sse</dt>
+                <dd><span id="light-master"></span> (Niveau <span id="light-master-level">0</span>)</dd>
+            </dl>
+            <div class="clearfix"></div>
+            <h1>Royaume des Ténèbres</h1>
+            <dl id="darkness-dl">
+                <dt>Maître·sse</dt>
+                <dd><span id="darkness-master"></span> (Niveau <span id="darkness-master-level">0</span>)</dd>
+            </dl>
+            <div class="clearfix"></div>
+        </div>
+        <div class="clearfix"></div>
+    </div>
+</div>
+
+</body>
+<script>
+    let initCounter = 0;
+
+    let guilds = null;
+    $.getJSON("/guilds.json", function(json) {
+        guilds = json; // this will show the info it in firebug console
+        initCounter++;
+        updateGeneric();
+    });
+
+    let users = null;
+    $.getJSON("/users.json", function(json) {
+        users = json; // this will show the info it in firebug console
+        initCounter++;
+        updateGeneric();
+    });
+
+    let realm = null;
+    $.getJSON("/realm.json", function(json) {
+        realm = json; // this will show the info it in firebug console
+        initCounter++;
+        updateGeneric();
+    });
+
+    function updateGeneric()
+    {
+        if (initCounter >= 3) {
+
+            let king = document.getElementById('king');
+            let population = document.getElementById('total-players');
+            king.innerHTML = realm.king;
+
+            let popCount = 0;
+            for (let u in users) {
+                popCount++;
+            }
+            population.innerHTML = popCount;
+
+            for (let g in guilds) {
+                let elementDl = document.getElementById(g + '-dl');
+                let master = document.getElementById(g + '-master');
+                let masterlevel = document.getElementById(g + '-master-level');
+                if ("" != guilds[g].master) {
+                    master.innerHTML = guilds[g].master;
+                    masterlevel.innerHTML = users[guilds[g].master].level;
+                }
+
+                let people = guilds[g].members;
+                let counter = 1;
+                people.forEach((member) => {
+                    if (member !== guilds[g].master) {
+                        let userDt = document.createElement('dt');
+                        let userDd = document.createElement('dd');
+
+                        let textDt = document.createTextNode('Disciple ' + counter);
+                        userDt.appendChild(textDt);
+
+                        let textDd = document.createTextNode(member + ' (Niveau ' + users[member].level + ")");
+                        userDd.appendChild(textDd);
+
+                        elementDl.appendChild(userDt);
+                        elementDl.appendChild(userDd);
+
+                        counter++;
+                    }
+                });
+            }
+
+
+            launchGeneric();
+        }
+    }
+
+
+    function launchGeneric() {
+        $('#credits').css("left", (($('#credits').parent().width() - $('#credits').outerWidth()) / 2) + "px");
+    }
+</script>
+</html>

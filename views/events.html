@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Events</title>
+    <script
+            src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+            crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container">
+    <div id="event"></div>
+</div>
+
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    let eventDiv = document.getElementById("event");
+
+    let eventDisplay = [];
+
+    $(function () {
+        let socket = io();
+        socket.on('displayEvent', function(event) {
+           switch (event.event) {
+               case 'joinGuild':
+                   joinGuildEvent(event);
+                   break;
+               case 'upGuild':
+                   upGuildEvent(event);
+                   break;
+               case 'poisonUsage':
+                   break;
+               case 'newKing':
+                   break;
+               case 'newMaster':
+                   break;
+           }
+        });
+    });
+
+    function joinGuildEvent(event) {
+        let message = event.user + " rejoins la guilde " + event.data.guild.longText;
+        eventDisplay.push(message);
+    }
+
+    function upGuildEvent(event) {
+        let message = event.user + " renforce la guilde " + event.data.guild.longText;
+        eventDisplay.push(message);
+    }
+
+    function popText() {
+        if (eventDisplay.length > 0) {
+            let message = eventDisplay.shift();
+            eventDiv.innerHTML = message;
+            setTimeout(function(){
+                eventDiv.innerHTML = '';
+            }, 3000);
+        }
+    }
+
+    setInterval(popText, 5000);
+</script>
+</html>

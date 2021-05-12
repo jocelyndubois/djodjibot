@@ -3,19 +3,59 @@ const io = require('socket.io-client');
 const socket = io.connect('http://localhost:3100');
 const fs = require('fs');
 
+var app = require('express')();
+var express = require('express');
+var path = require('path');
+
+var http = require('http').createServer(app);
+var ioServ = require('socket.io')(http);
+
+ioServ.on('connection', function(socket){
+    console.log('event page connected.')
+});
+
+app.use(express.static(path.join(__dirname, 'views')));
+
 let config = require('./config.json');
 
 const guildFile = config.devMode ? './dev/guilds.json' : './jsons/guilds.json';
+const guildFullFile = __dirname + '/' + (config.devMode ? 'dev/' : 'jsons/') + "guilds.json";
 const backupGuildFile = './backup/guilds.json';
 let guilds = require(guildFile);
 
 const userFile = config.devMode ? './dev/users.json' : './jsons/users.json';
+const userFullFile = __dirname + '/' + (config.devMode ? 'dev/' : 'jsons/') + "users.json";
 const backupUserFile = './backup/users.json';
 let users = require(userFile);
 
 const realmFile = config.devMode ? './dev/realm.json' : './jsons/realm.json';
+const realmFullFile = __dirname + '/' + (config.devMode ? 'dev/' : 'jsons/') + "realm.json";
 const backupRealmFile = './backup/realm.json';
 let realm = require(realmFile);
+
+http.listen(config.port, function(){
+    console.log('listening on *:' + config.port);
+});
+
+app.get('/generic/', function(req, res){
+    res.sendFile(__dirname + '/views/generic.html');
+});
+
+app.get('/events/', function(req, res){
+    res.sendFile(__dirname + '/views/events.html');
+});
+
+app.get('/guilds.json', function(req, res){
+    res.sendFile(guildFullFile);
+});
+
+app.get('/users.json', function(req, res){
+    res.sendFile(userFullFile);
+});
+
+app.get('/realm.json', function(req, res){
+    res.sendFile(realmFullFile);
+});
 
 /**
  * Create a backup at every launch
@@ -63,9 +103,31 @@ socket.on(
                 if (null !== previousGuild) {
                     messageQueue.push(`La guilde ${previousGuild.longText} pleure le départ d'un de ses membres.`);
                 }
+
+                ioServ.emit(
+                    'displayEvent',
+                    {
+                        'event': 'joinGuild',
+                        'user': infos.user,
+                        'data': {
+                            "guild": guilds[infos.guild]
+                        }
+                    }
+                );
             } else {
                 let newLevel = increaseUserLevel(infos.user);
                 messageQueue.push(`${infos.user} renforce son allégence à la guilde ${guild.longText}. ${guild.emote} (Niveau ${newLevel})`);
+
+                ioServ.emit(
+                    'displayEvent',
+                    {
+                        'event': 'upGuild',
+                        'user': infos.user,
+                        'data': {
+                            "guild": guilds[infos.guild]
+                        }
+                    }
+                );
             }
 
             updateGuildMasters();
@@ -97,6 +159,17 @@ socket.on(
                     } else {
                         messageQueue.push(`${infos.user} s'approche perfidement de ${victim} et dépose quelques gouttes de poison dans la bière qu'il·elle tenait à la main. Quelques heures plus tard, croyant être ivre, ${victim} s'effondre dans son lit. Il·Elle ne se réveille que 3 jours plus tard, plus faible que jamais.`);
                     }
+
+                    ioServ.emit(
+                        'displayEvent',
+                        {
+                            'event': 'poisonUsage',
+                            'user': infos.user,
+                            'data': {
+                                "victim": victim
+                            }
+                        }
+                    );
                 }
             }
         }
@@ -221,7 +294,16 @@ function updateKing() {
             if ("" !== oldKing.king) {
                 message += ` Souvenez vous de ce jour, festoyez, mais restez vigilants, ${oldKing.king} le·la déchu·e ne laissera probablement pas passer l'affront et fera tout pour redorer l'image de la guilde ${guilds[oldKing.guild].longText}.`;
             }
-            messageQueue.push(message)
+            messageQueue.push(message);
+
+            ioServ.emit(
+                'displayEvent',
+                {
+                    'event': 'newKing',
+                    'user': realm.king,
+                    'data': {}
+                }
+            );
         }
 
     }
@@ -310,6 +392,16 @@ function updateGuildMasters() {
                 //New guild master
                 guild.master = master;
                 messageQueue.push(`Acclamez tous ${master} le·la nouveau·elle Maître·esse de la guilde ${guild.longText} !`);
+                ioServ.emit(
+                    'displayEvent',
+                    {
+                        'event': 'newMaster',
+                        'user': master,
+                        'data': {
+                            "guild": guild
+                        }
+                    }
+                );
             }
 
             users[master].isMaster = true;
@@ -511,7 +603,6 @@ function addToGuild(user, guild) {
  * @param guild
  */
 function updateUserGuild(user, guild) {
-    console.log('test');
     users[user].guild = guild;
     users[user].level = 1;
 }

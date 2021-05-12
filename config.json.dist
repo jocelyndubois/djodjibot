@@ -1,4 +1,5 @@
 {
+  "port": 3000,
   "devMode" : false,
   "currentUser": "TWITCH_DISPLAY_NAME",
   "botInfos": {
@@ -9,5 +10,5 @@
     "channels": [
       "TWITCH_CHANNEL"
     ]
-  },
+  }
 }
