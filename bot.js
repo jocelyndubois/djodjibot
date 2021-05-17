@@ -183,7 +183,7 @@ socket.on(
 );
 
 /**
- * Action when a poison is used.
+ * King slay
  */
 socket.on(
     'kingSlayer',
@@ -218,6 +218,9 @@ socket.on(
     }
 );
 
+/**
+ * King defense
+ */
 socket.on(
     'kingGuard',
     function (infos) {
@@ -233,6 +236,58 @@ socket.on(
             messageQueue.push(`${infos.user} s'enrôle dans l'armée du roi. La trahison ralentit (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
         }
 
+        saveRealm();
+    }
+);
+
+socket.on(
+    'grub',
+    function (infos) {
+        if (config.devMode || (!config.devMode && config.currentUser !== infos.user)) {
+            instanciateUser(infos.user);
+
+            let user = chooseSomeoneRandom(true);
+            let levelsIncrease = Math.floor(Math.random() * 10) + 1;
+
+            users[user].level = users[user].level + levelsIncrease;
+            messageQueue.push(`Un grub a été sauvé (${infos.total}/48), papa grub donne ${levelsIncrease} niveaux à ${user}.`);
+        }
+
+        updateGuildMasters();
+        updateGuildLevels();
+
+        saveGuilds();
+        saveUsers();
+        saveRealm();
+    }
+);
+
+socket.on(
+    'papaGrub',
+    function (infos) {
+        if (config.devMode || (!config.devMode && config.currentUser !== infos.user)) {
+            instanciateUser(infos.user);
+
+            messageQueue.push(`BRAVO !! Papa grub a retrouvé tout ses petits, ils vous remercie abondamment !!!`)
+            for (let i = 0; i < 10; i++) {
+                let user = chooseSomeoneRandom(true);
+                let levelsIncrease = Math.floor(Math.random() * 10) + 1;
+
+                let levelText = 'niveaux'
+                if (1 === levelsIncrease) {
+                    levelText = 'niveau'
+                }
+
+                users[user].level = users[user].level + levelsIncrease;
+                messageQueue.push(`Papa grub donne ${levelsIncrease} ${levelText} à ${user}.`);
+            }
+        }
+
+        updateGuildMasters();
+        updateGuildLevels();
+
+        saveGuilds();
+        saveUsers();
         saveRealm();
     }
 );
@@ -396,17 +451,18 @@ function isPoisonPossible(poisoner) {
 /**
  * Randomly select ANYONE in the realm (including yourself)
  *
+ * @param soft
  * @returns {string|*}
  */
-function chooseSomeoneRandom() {
+function chooseSomeoneRandom(soft = false) {
     let totalUsers = Object.keys(users).length;
     let key = Math.floor(Math.random() * totalUsers);
 
     let counter = 0;
     for (user in users) {
         if (key === counter) {
-            if ('' === users[user].guild || users[user].level < 2) {
-                return chooseSomeoneRandom();
+            if ('' === users[user].guild || (!soft && users[user].level < 2)) {
+                return chooseSomeoneRandom(soft);
             }
             return user;
         }
