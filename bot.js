@@ -115,8 +115,10 @@ socket.on(
                     }
                 );
             } else {
-                let newLevel = increaseUserLevel(infos.user);
-                messageQueue.push(`${infos.user} renforce son allégence à la guilde ${guild.longText}. ${guild.emote} (Niveau ${newLevel})`);
+                let oldLevel = users[infos.user].level
+                let levels = generateNumberOfLevel();
+                let newLevel = increaseUserLevel(infos.user, levels);
+                messageQueue.push(`${infos.user} (${oldLevel} -> ${newLevel} / +${levels}) renforce son allégence à la guilde ${guild.longText}. ${guild.emote}`);
 
                 ioServ.emit(
                     'displayEvent',
@@ -291,6 +293,42 @@ socket.on(
         saveRealm();
     }
 );
+
+/**
+ * @returns {number}
+ */
+function generateNumberOfLevel() {
+    let percentage = Math.floor(Math.random() * 100) + 1;
+
+    if (percentage <= 70) {
+        //70% -> 1
+        return 1;
+    } else if (70 < percentage && 80 >= percentage) {
+        //10% -> 2
+        return 2;
+    } else if (80 < percentage && 85 >= percentage) {
+        //5% -> 3
+        return 3;
+    } else if (85 < percentage && 90 >= percentage) {
+        //5% -> 4
+        return 4;
+    } else if (90 < percentage && 93 >= percentage) {
+        //3% -> 5
+        return 5;
+    } else if (93 < percentage && 96 >= percentage) {
+        //3% -> 6
+        return 6;
+    } else if (96 < percentage && 98 >= percentage) {
+        //2% -> 7
+        return 7;
+    } else if (98 < percentage && 99 >= percentage) {
+        //1% -> 8
+        return 8;
+    } else if (100 === percentage) {
+        //1% -> 9
+        return 9;
+    }
+}
 
 /**
  * Listen to the chat and act depending on the command asked.
@@ -748,10 +786,11 @@ function updateUserGuild(user, guild) {
  * @param user
  * @returns {*}
  */
-function increaseUserLevel(user) {
-    users[user].level++;
+function increaseUserLevel(user, levels = 1) {
+    let newLevel = users[user].level + levels;
+    users[user].level = newLevel;
 
-    return users[user].level;
+    return newLevel;
 }
 
 /**
