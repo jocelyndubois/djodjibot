@@ -1,5 +1,7 @@
 {
   "port": 3000,
+  "kingSlayerCost": 1000,
+  "kingSlayerNeeded": 10000,
   "devMode" : false,
   "currentUser": "TWITCH_DISPLAY_NAME",
   "botInfos": {

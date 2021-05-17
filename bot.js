@@ -183,6 +183,61 @@ socket.on(
 );
 
 /**
+ * Action when a poison is used.
+ */
+socket.on(
+    'kingSlayer',
+    function (infos) {
+        if (config.devMode || (!config.devMode && config.currentUser !== infos.user)) {
+            instanciateUser(infos.user);
+
+            if (!realm.kingSlayer) {
+                realm.kingSlayer = config.kingSlayerCost;
+            } else {
+                realm.kingSlayer = realm.kingSlayer + config.kingSlayerCost;
+            }
+
+
+            if (realm.kingSlayer >= config.kingSlayerNeeded) {
+                //King is dead.
+                messageQueue.push(`Un régicide a eu lieu. ${realm.king} est mort·e.`);
+                realm.kingSlayer = 0;
+                realm.kingLevel = 0;
+                users[realm.king].level = 1;
+            } else {
+                messageQueue.push(`${infos.user} complote contre ${realm.king}. La trahison progresse (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
+            }
+        }
+
+        updateGuildMasters();
+        updateGuildLevels();
+
+        saveGuilds();
+        saveUsers();
+        saveRealm();
+    }
+);
+
+socket.on(
+    'kingGuard',
+    function (infos) {
+        if (config.devMode || (!config.devMode && config.currentUser !== infos.user)) {
+            instanciateUser(infos.user);
+
+            if (!realm.kingSlayer) {
+                realm.kingSlayer = 0;
+            } else {
+                realm.kingSlayer = Math.max((realm.kingSlayer - config.kingSlayerCost), 0);
+            }
+
+            messageQueue.push(`${infos.user} s'enrôle dans l'armée du roi. La trahison ralentit (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
+        }
+
+        saveRealm();
+    }
+);
+
+/**
  * Listen to the chat and act depending on the command asked.
  *
  * @param target
@@ -220,6 +275,8 @@ function onMessageHandler(target, context, msg, self) {
                 getStatsOfGuild('darkness');
             } else if (commandName === '!roi') {
                 displayKing();
+            } else if (commandName === '!complot') {
+                displayComplot();
             } else {
                 if (userExist(commandName.substring(1))) {
                     getStatsOfUser(commandName.substring(1));
@@ -289,10 +346,10 @@ function updateKing() {
         realm.kingGuild = bestGuild.guild;
 
         if (oldKing.king !== realm.king) {
-            let message = `Habitant·e·s du Royaume ... aujourd'hui est un grand jour. La guilde ${guilds[bestGuild.guild].longText} a fait croitre sa notoriété jusqu'a devenir la plus influente. Son·Sa Maître·sse ${realm.king} est donc placé à la tête du royaume. Acclamez votre nouveau·elle Souverain·e !`;
+            let message = `${realm.king} (${users[realm.king].level}) de la guilde ${guilds[bestGuild.guild].longText} (${guilds[bestGuild.guild].level}) gouverne désormais le royaume. Gloire à la royauté !`;
 
             if ("" !== oldKing.king) {
-                message += ` Souvenez vous de ce jour, festoyez, mais restez vigilants, ${oldKing.king} le·la déchu·e ne laissera probablement pas passer l'affront et fera tout pour redorer l'image de la guilde ${guilds[oldKing.guild].longText}.`;
+                message += ` Mais restez vigilants, ${oldKing.king} (${users[oldKing.king].level}) ne laissera probablement pas passer l'affront et fera tout pour redorer l'image de la guilde ${guilds[oldKing.guild].longText} (${guilds[oldKing.guild].level}).`;
             }
             messageQueue.push(message);
 
@@ -391,7 +448,7 @@ function updateGuildMasters() {
             if (master !== guild.master) {
                 //New guild master
                 guild.master = master;
-                messageQueue.push(`Acclamez tous ${master} le·la nouveau·elle Maître·esse de la guilde ${guild.longText} !`);
+                messageQueue.push(`Acclamez tous ${master}, nouveau·elle Maître·esse de la guilde ${guild.longText} !`);
                 ioServ.emit(
                     'displayEvent',
                     {
@@ -459,10 +516,10 @@ function getStatsOfUser(user) {
     if ("" !== stats.guild) {
         let guild = guilds[stats.guild];
         if (stats.isMaster) {
-            message = `${user} est le·la grand·e Maître·sse de la guilde ${guild.longText}. (Niveau ${stats.level})`;
+            message = `${user} (${stats.level}) est le·la Maître·sse de la guilde ${guild.longText} (${guild.level}).`;
         } else {
             let guildMaster = getMasterOfGuild(guild);
-            message = `${user} est un·e disciple (Niveau ${stats.level}) de la guilde ${guild.longText} sous les ordres de ${guildMaster}`
+            message = `${user} (${stats.level}) est un·e disciple de la guilde ${guild.longText} (${guild.level}) sous les ordres de ${guildMaster} (${users[guildMaster].level}).`
         }
     } else {
         message = `${user} ? Hmm qui est cet·te iconnu·e qui se promène dans mon royaume ? Prens un siège et rejoins une guilde via les points de chaine :)`;
@@ -475,7 +532,30 @@ function getStatsOfUser(user) {
  * Affiche le roi actuel.
  */
 function displayKing() {
-    messageQueue.push(`Le Royaume est actuellement dirigé par ${realm.king}, qui est égallement à la tête de la guilde la plus puissante du royaume: celle ${guilds[realm.kingGuild].longText}`)
+    let popCount = populationCount();
+    messageQueue.push(`${realm.king} (${users[realm.king].level}) de la guilde ${guilds[realm.kingGuild].longText} (${guilds[realm.kingGuild].level}) dirige le royaume peuplé de ${popCount} personnes.`)
+}
+
+/**
+ * Retourne la population totale du royaume.
+ *
+ * @returns {number}
+ */
+function populationCount() {
+    let popCount = 0;
+    for (let u in users) {
+        popCount++;
+    }
+
+    return popCount;
+}
+
+function displayComplot() {
+    if (realm.kingSlayer > 0) {
+        messageQueue.push(`Une rumeur dit qu'un complot se prépare contre le·la souverain·e. (${realm.kingSlayer}/${config.kingSlayerNeeded})`)
+    } else {
+        messageQueue.push(`Le royaume est en paix, et rien ne semble menacer le·la souverain·e ... pour combien de temps encore ?`)
+    }
 }
 
 /**
@@ -487,34 +567,33 @@ function getStatsOfGuild(guildName) {
     let message = '';
     let guild = guilds[guildName];
     if (guild.master) {
-        switch (guildName) {
-            case 'water':
-                message = `Depuis sa citée engloutie, ${guild.master} le bras droit de Poséidon dirige la guilde de l'eau.`
-                break;
-            case 'earth':
-                message = `Au sommet de la plus haute montagne du continent, trône le·la puissant·e ${guild.master}, le·la grand·e Maître·sse de la guilde de la terre.`
-                break;
-            case 'fire':
-                message = `Dans sa forge au centre d'un volcan, ${guild.master} le·la vieux·ielle forgeron·ne des dieux règne sur la guilde du feu.`
-                break;
-            case 'air':
-                message = `Loin au dessus de la terre, perché dans les nuages, ${guild.master} l'Avatar observe la vie terrestre avec curiosité.`
-                break;
-            case 'light':
-                message = `Réfugié sur le soleil depuis des siècles, loin des troubles de la vie humaine, ${guild.master} le·la puissant·te règne sans partage sur la guilde de la lumière.`
-                break;
-            case 'darkness':
-                message = `Caché au fond d'un gouffre sans fond sur la lointaine planète Mars, ${guild.master} le·la terrifiant·e règne sur les morts et la guilde des ténèbres.`
-                break;
-        }
+        message = `La guilde est dirigée par ${guild.master} (${users[guild.master].level})`
+        // switch (guildName) {
+        //     case 'water':
+        //         message = `Depuis sa citée engloutie, ${guild.master} le bras droit de Poséidon dirige la guilde de l'eau.`
+        //         break;
+        //     case 'earth':
+        //         message = `Au sommet de la plus haute montagne du continent, trône le·la puissant·e ${guild.master}, le·la grand·e Maître·sse de la guilde de la terre.`
+        //         break;
+        //     case 'fire':
+        //         message = `Dans sa forge au centre d'un volcan, ${guild.master} le·la vieux·ielle forgeron·ne des dieux règne sur la guilde du feu.`
+        //         break;
+        //     case 'air':
+        //         message = `Loin au dessus de la terre, perché dans les nuages, ${guild.master} l'Avatar observe la vie terrestre avec curiosité.`
+        //         break;
+        //     case 'light':
+        //         message = `Réfugié sur le soleil depuis des siècles, loin des troubles de la vie humaine, ${guild.master} le·la puissant·te règne sans partage sur la guilde de la lumière.`
+        //         break;
+        //     case 'darkness':
+        //         message = `Caché au fond d'un gouffre sans fond sur la lointaine planète Mars, ${guild.master} le·la terrifiant·e règne sur les morts et la guilde des ténèbres.`
+        //         break;
+        // }
 
-        let members = guild.members.length;
+        let members = guild.members.length - 1;
         if (members === 1) {
-            message += ` Malheureusement il·elle peine encore à recruter et ne possède aucun disciple.`;
-        } else if (members === 2) {
-            message += ` Accompagné de son·sa seul·e disciple, il·elle cherche toujours du sang frais pour venir grossir les rangs.`;
-        } else if (members > 2) {
-            message += ` Il·Elle est secondé·e par ses ${members} disciples a qui il·elle tente d'enseigner toutes les subtilitées de son art.`;
+            message += ` et ne possède aucun disciple.`;
+        } else if (members >= 2) {
+            message += ` et possède ${members} disciples.`;
         }
 
         message += ` (Niveau de la guilde : ${guild.level})`;
