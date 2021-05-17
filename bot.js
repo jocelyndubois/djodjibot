@@ -250,7 +250,7 @@ socket.on(
             let levelsIncrease = Math.floor(Math.random() * 10) + 1;
 
             users[user].level = users[user].level + levelsIncrease;
-            messageQueue.push(`Un grub a été sauvé (${infos.total}/48), papa grub donne ${levelsIncrease} niveaux à ${user}.`);
+            messageQueue.push(`Un grub a été sauvé (${infos.total}/46), papa grub donne ${levelsIncrease} niveaux à ${user}.`);
         }
 
         updateGuildMasters();
