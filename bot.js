@@ -118,7 +118,7 @@ socket.on(
                 let oldLevel = users[infos.user].level
                 let levels = generateNumberOfLevel();
                 let newLevel = increaseUserLevel(infos.user, levels);
-                messageQueue.push(`${infos.user} (${oldLevel} -> ${newLevel} / +${levels}) renforce son allégence à la guilde ${guild.longText}. ${guild.emote}`);
+                messageQueue.push(`${infos.user} (${oldLevel} -> ${newLevel} / +${levels}) renforce son allégeance à la guilde ${guild.longText}. ${guild.emote}`);
 
                 ioServ.emit(
                     'displayEvent',
