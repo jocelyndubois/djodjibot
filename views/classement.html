@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Générique</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+    <link rel="stylesheet" href="/css/classement.css">
+
+    <script
+            src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+            crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="col" id="top3">
+            <table class="table table-dark table-striped">
+                <caption>Top 3</caption>
+                <thead>
+                <tr>
+                    <th>Joueur</th>
+                    <th>Guilde</th>
+                    <th>Niveau</th>
+                </tr>
+                </thead>
+                <tbody id="top3-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <table class="table table-dark table-striped">
+                <caption>Guilde de l'eau</caption>
+                <thead>
+                <tr>
+                    <th>Joueur</th>
+                    <th>Status</th>
+                    <th>Niveau</th>
+                </tr>
+                </thead>
+                <tbody id="water-tbody"></tbody>
+            </table>
+        </div>
+        <div class="col">
+            <table class="table table-dark table-striped">
+                <caption>Guilde de la terre</caption>
+                <thead>
+                <tr>
+                    <th>Joueur</th>
+                    <th>Status</th>
+                    <th>Niveau</th>
+                </tr>
+                </thead>
+                <tbody id="earth-tbody"></tbody>
+            </table>
+        </div>
+        <div class="col">
+            <table class="table table-dark table-striped">
+                <caption>Guilde du feu</caption>
+                <thead>
+                <tr>
+                    <th>Joueur</th>
+                    <th>Status</th>
+                    <th>Niveau</th>
+                </tr>
+                </thead>
+                <tbody id="fire-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <table class="table table-dark table-striped">
+                <caption>Guilde de l'air</caption>
+                <thead>
+                <tr>
+                    <th>Joueur</th>
+                    <th>Status</th>
+                    <th>Niveau</th>
+                </tr>
+                </thead>
+                <tbody id="air-tbody"></tbody>
+            </table>
+        </div>
+        <div class="col">
+            <table class="table table-dark table-striped">
+                <caption>Guilde de la lumière</caption>
+                <thead>
+                <tr>
+                    <th>Joueur</th>
+                    <th>Status</th>
+                    <th>Niveau</th>
+                </tr>
+                </thead>
+                <tbody id="light-tbody"></tbody>
+            </table>
+        </div>
+        <div class="col">
+            <table class="table table-dark table-striped">
+                <caption>Guilde des ténèbres</caption>
+                <thead>
+                <tr>
+                    <th>Joueur</th>
+                    <th>Status</th>
+                    <th>Niveau</th>
+                </tr>
+                </thead>
+                <tbody id="darkness-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+<script>
+    let maxDisplay = 4;
+
+    let realm = null;
+    let users = [];
+    let usersjson = null;
+    let guilds = null;
+    let guildUsers = {
+        'water': [],
+        'earth': [],
+        'fire': [],
+        'air': [],
+        'light': [],
+        'darkness': []
+    }
+
+    getRealm();
+
+    function getRealm() {
+        $.getJSON("/realm.json", function(json) {
+            realm = json;
+            getUsers();
+        });
+
+    }
+
+    function getUsers() {
+        $.getJSON("/users.json", function(json) {
+            usersjson = json;
+            for (let u in json) {
+                json[u].user = u;
+                users.push(json[u]);
+            }
+            getGuilds();
+        });
+    }
+
+    function getGuilds() {
+        $.getJSON("/guilds.json", function(json) {
+            guilds = json;
+
+            for (let g in json) {
+                json[g].members.forEach(function (u) {
+                    guildUsers[g].push(usersjson[u]);
+                });
+
+                guildUsers[g].sort( compare );
+            }
+
+            updateGeneric();
+        });
+    }
+
+    function updateGeneric()
+    {
+        users.sort( compare );
+
+        let top3Body = document.getElementById('top3-tbody');
+        for (let i = 0; i <= 2; i++) {
+            let userTr = document.createElement('tr');
+
+            let userName = document.createElement('td');
+            let textName = document.createTextNode(users[i].user);
+            userName.appendChild(textName);
+            userTr.appendChild(userName);
+
+            let userGuild = document.createElement('td');
+            let textGuild = document.createTextNode(guilds[users[i].guild].text);
+            userGuild.appendChild(textGuild);
+            userTr.appendChild(userGuild);
+
+            let userLevel = document.createElement('td');
+            let textLevel = document.createTextNode(users[i].level);
+            userLevel.appendChild(textLevel);
+            userTr.appendChild(userLevel);
+
+            top3Body.appendChild(userTr);
+        }
+
+        for (g in guildUsers) {
+            let guildBody = document.getElementById(g + '-tbody');
+            for (let i = 0; i < guildUsers[g].length; i++) {
+                if (i < maxDisplay) {
+                    let userTr = document.createElement('tr');
+
+                    let userName = document.createElement('td');
+                    let textName = document.createTextNode(guildUsers[g][i].user);
+                    userName.appendChild(textName);
+                    userTr.appendChild(userName);
+
+                    let userStatus = document.createElement('td');
+                    let textStatus = document.createTextNode((i === 0) ? 'Maitre' : 'Disciple');
+                    userStatus.appendChild(textStatus);
+                    userTr.appendChild(userStatus);
+
+                    let userLevel = document.createElement('td');
+                    let textLevel = document.createTextNode(guildUsers[g][i].level);
+                    userLevel.appendChild(textLevel);
+                    userTr.appendChild(userLevel);
+
+                    guildBody.appendChild(userTr);
+                } else if (i === maxDisplay) {
+                    let moreTr = document.createElement('tr');
+                    let moreTd = document.createElement('td');
+                    moreTd.colSpan = 3;
+                    moreTd.classList.add('more');
+                    let textMore = document.createTextNode('...');
+                    moreTd.appendChild(textMore);
+                    moreTr.appendChild(moreTd);
+
+                    guildBody.appendChild(moreTr);
+                }
+            }
+        }
+
+        /*
+        let realmDiv = document.getElementById('the-end');
+        let king = document.getElementById('king');
+        let population = document.getElementById('total-players');
+        king.innerHTML = realm.king;
+
+        if (realm.name) {
+            realmDiv.innerHTML = realm.name;
+        }
+
+        let popCount = 0;
+        for (let u in users) {
+            popCount++;
+        }
+        population.innerHTML = popCount;
+
+        for (let g in guilds) {
+            let elementDl = document.getElementById(g + '-dl');
+            let master = document.getElementById(g + '-master');
+            let masterlevel = document.getElementById(g + '-master-level');
+            if ("" != guilds[g].master) {
+                master.innerHTML = guilds[g].master;
+                masterlevel.innerHTML = users[guilds[g].master].level;
+            }
+
+            let people = guilds[g].members;
+            let counter = 1;
+            people.forEach((member) => {
+                if (member !== guilds[g].master) {
+                    let userDt = document.createElement('dt');
+                    let userDd = document.createElement('dd');
+
+                    let textDt = document.createTextNode('Disciple ' + counter);
+                    userDt.appendChild(textDt);
+
+                    let textDd = document.createTextNode(member + ' (Niveau ' + users[member].level + ")");
+                    userDd.appendChild(textDd);
+
+                    elementDl.appendChild(userDt);
+                    elementDl.appendChild(userDd);
+
+                    counter++;
+                }
+            });
+        }
+
+
+        launchGeneric();
+        */
+    }
+
+
+    function compare( a, b ) {
+        if ( a.level > b.level ){
+            return -1;
+        }
+        if ( a.level < b.level ){
+            return 1;
+        }
+        return 0;
+    }
+</script>
+</html>

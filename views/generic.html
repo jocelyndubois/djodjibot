@@ -94,10 +94,14 @@
     function updateGeneric()
     {
         if (initCounter >= 3) {
-
+            let realmDiv = document.getElementById('the-end');
             let king = document.getElementById('king');
             let population = document.getElementById('total-players');
             king.innerHTML = realm.king;
+
+            if (realm.name) {
+                realmDiv.innerHTML = realm.name;
+            }
 
             let popCount = 0;
             for (let u in users) {

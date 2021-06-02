@@ -1,6 +1,6 @@
 const tmi = require('tmi.js');
 const io = require('socket.io-client');
-const socket = io.connect('http://localhost:3100');
+const socket = io.connect('http://82.65.73.118:3200');
 const fs = require('fs');
 
 var app = require('express')();
@@ -39,6 +39,10 @@ http.listen(config.port, function(){
 
 app.get('/generic/', function(req, res){
     res.sendFile(__dirname + '/views/generic.html');
+});
+
+app.get('/classement/', function(req, res){
+    res.sendFile(__dirname + '/views/classement.html');
 });
 
 app.get('/events/', function(req, res){
@@ -81,6 +85,7 @@ client.on('connected', onConnectedHandler);
 // Connect to Twitch:
 client.connect();
 
+updateGuildMasters();
 updateGuildLevels();
 
 /**
@@ -102,6 +107,10 @@ socket.on(
 
                 if (null !== previousGuild) {
                     messageQueue.push(`La guilde ${previousGuild.longText} pleure le départ d'un de ses membres.`);
+                }
+
+                if (realm.king === infos.user) {
+                    realm.kingGuild = infos.guild;
                 }
 
                 ioServ.emit(
@@ -243,6 +252,191 @@ socket.on(
 );
 
 socket.on(
+    'chaosPotion',
+    function (infos) {
+        if (config.devMode || (!config.devMode && config.currentUser !== infos.user)) {
+            instanciateUser(infos.user);
+
+            doBackup();
+            console.log('BACKUP DONE');
+
+            //choose effect
+            let percentage = Math.floor(Math.random() * 100) + 1;
+            console.log(`Dice : ${percentage}`);
+            if (percentage <= 10) {
+                console.log(`20% -> Gain levels`);
+                let user = chooseSomeoneRandom(true);
+                let levelsIncrease = Math.floor(Math.random() * 10) + 1;
+
+                let levelText = 'niveaux'
+                if (1 === levelsIncrease) {
+                    levelText = 'niveau'
+                }
+
+                users[user].level = users[user].level + levelsIncrease;
+                messageQueue.push(`[POTION DE CHANCE] ${user} gagne ${levelsIncrease} ${levelText} (${users[user].level}).`);
+            } else if (20 < percentage && 30 >= percentage) {
+                console.log(`10% -> Lose levels`);
+                let user = chooseSomeoneRandom(true);
+                let levelsIncrease = Math.floor(Math.random() * 10) + 1;
+
+                let newLevel = users[user].level - levelsIncrease;
+                let levelDif = levelsIncrease;
+                if (newLevel < 1) {
+                    newLevel = 1;
+                    levelDif = users[user].level - 1;
+                }
+                users[user].level = newLevel;
+                let levelText = 'niveaux'
+                if (1 === levelDif) {
+                    levelText = 'niveau'
+                }
+
+                messageQueue.push(`[POTION DE TRISTESSE] ${user} perd ${levelDif} ${levelText} (${users[user].level}).`);
+            } else if (40 < percentage && 55 >= percentage) {
+                console.log(`15% -> kingDefense`);
+                let multiplicator = Math.floor(Math.random() * 3) + 1;
+                let multiPop = multiplicator * config.kingSlayerCost;
+                if (!realm.kingSlayer) {
+                    realm.kingSlayer = 0;
+                } else {
+                    realm.kingSlayer = Math.max((realm.kingSlayer - multiPop), 0);
+                }
+
+                messageQueue.push(`[POTION DE PATRIOTISME] La trahison ralentit ${multiplicator} fois (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
+            } else if (55 < percentage && 70 >= percentage) {
+                console.log('15% -> kingSlayer');
+                let multiplicator = Math.floor(Math.random() * 3) + 1;
+                let multiPop = multiplicator * config.kingSlayerCost;
+
+
+                if (!realm.kingSlayer) {
+                    realm.kingSlayer = multiPop;
+                } else {
+                    realm.kingSlayer = realm.kingSlayer + multiPop;
+                }
+
+                if (realm.kingSlayer >= config.kingSlayerNeeded) {
+                    //King is dead.
+                    messageQueue.push(`[POTION D'ANARCHIE] La trahison progresse.`);
+                    messageQueue.push(`Un régicide a eu lieu. ${realm.king} est mort·e.`);
+                    realm.kingSlayer = 0;
+                    realm.kingLevel = 0;
+                    users[realm.king].level = 1;
+                } else {
+                    messageQueue.push(`[POTION D'ANARCHIE] La trahison progresse ${multiplicator} fois (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
+                }
+            } else if (70 < percentage && 85 >= percentage) {
+                console.log('15% -> Changement de guilde');
+                let user = chooseSomeoneRandom(true);
+                let newGuild = chooseGuildRandom();
+
+                if (newGuild === users[user].guild) {
+                    messageQueue.push(`[POTION DE MUTATION] ${user} a été choisi par la potion, mais sa volonté était trop forte, il·elle reste dans sa guilde.`);
+                } else {
+                    addToGuild(user, newGuild, true);
+
+                    messageQueue.push(`[POTION DE MUTATION] ${user} transfert ses connaissance vers la guilde ${guilds[newGuild].longText}.`);
+                }
+            } else if (85 < percentage && 88 >= percentage) {
+                console.log('3% -> PLAGUE');
+                let guild = chooseGuildRandom();
+                let people = guilds[guild].members;
+
+                messageQueue.push(`[POTION DE PESTE] La peste frappe la guilde ${guilds[guild].longText}.`);
+
+
+                people.forEach((member) => {
+                    users[member].level;
+
+                    let levelsDecrease = Math.floor(Math.random() * 5) + 1;
+
+                    let newLevel = users[member].level - levelsDecrease;
+                    let levelDif = levelsDecrease;
+                    if (newLevel < 1) {
+                        newLevel = 1;
+                        levelDif = users[member].level - 1;
+                    }
+                    users[member].level = newLevel;
+                    let levelText = 'niveaux'
+                    if (1 === levelDif) {
+                        levelText = 'niveau'
+                    }
+
+                    messageQueue.push(`[POTION DE PESTE] ${member} perd ${levelDif} ${levelText} (${users[member].level}).`);
+                });
+            } else if ((10 < percentage && 20 >= percentage) || (88 < percentage && 95 >= percentage) || (33 < percentage && 40 >= percentage)) {
+                console.log('24% -> level Rain');
+                for (let i = 0; i < 10; i++) {
+                    let user = chooseSomeoneRandom(true);
+                    let levelsIncrease = Math.floor(Math.random() * 10) + 1;
+
+                    let levelText = 'niveaux'
+                    if (1 === levelsIncrease) {
+                        levelText = 'niveau'
+                    }
+
+                    users[user].level = users[user].level + levelsIncrease;
+                    messageQueue.push(`[POTION DE NOËL] ${user} gagne ${levelsIncrease} ${levelText} (${users[user].level}).`);
+                }
+            }  else if (95 < percentage || (30 < percentage && 33 >= percentage)) {
+                console.log('8% -> Shuffle EVERYTHING');
+                let totalLevels = countTotalLevels();
+                let totalUsers = countTotalUsers();
+                console.log('[SHUFFLE] Total levels: '+ totalLevels);
+
+                realm.king = '';
+                realm.kingLevel = 0;
+
+                let usersArr = [];
+                for (user in users) {
+                    if (users[user].guild != "") {
+                        usersArr.push(user);
+                    }
+                }
+                shuffle(usersArr);
+
+                let counter = 1;
+                let remainingLevels = totalLevels - totalUsers;
+                usersArr.forEach(function (item, index) {
+                    if (counter === totalUsers) {
+                        users[item].level = 1 + remainingLevels;
+                        console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
+                    } else {
+                        if (remainingLevels > 0) {
+                            let levelLimit = Math.floor(remainingLevels/3);
+                            let levelToAdd = Math.floor(Math.random() * (remainingLevels + 1));
+                            levelToAdd = Math.min(levelLimit, levelToAdd);
+                            users[item].level = 1 + levelToAdd;
+                            remainingLevels -= levelToAdd;
+                            console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
+                        } else {
+                            users[item].level = 1;
+                            console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
+                        }
+                    }
+
+                    let guild = chooseGuildRandom();
+                    addToGuild(item, guild, true);
+                    console.log(`[SHUFFLE] ${item} - Guilde ${users[item].guild}`);
+
+                    counter++;
+                });
+
+                messageQueue.push(`[POTION DE CHAOS] Peut être devrierez vous vérifier votre état ?`);
+            }
+        }
+
+        updateGuildMasters();
+        updateGuildLevels();
+
+        saveGuilds();
+        saveUsers();
+        saveRealm();
+    }
+);
+
+socket.on(
     'grub',
     function (infos) {
         if (config.devMode || (!config.devMode && config.currentUser !== infos.user)) {
@@ -293,6 +487,39 @@ socket.on(
         saveRealm();
     }
 );
+
+function shuffle(array) {
+    array.sort(() => Math.random() - 0.5);
+}
+
+function chooseGuildRandom() {
+    let guildsList = ['water', 'earth', 'fire', 'air', 'light', 'darkness']
+    let newGuildId = Math.floor(Math.random() * 6);
+
+    return guildsList[newGuildId];
+}
+
+function countTotalLevels() {
+    let totalLevel = 0;
+    for (user in users) {
+        if (users[user].guild !== '') {
+            totalLevel += users[user].level;
+        }
+    }
+
+    return totalLevel;
+}
+
+function countTotalUsers() {
+    let totalUsers = 0;
+    for (user in users) {
+        if (users[user].guild !== '') {
+            totalUsers++;
+        }
+    }
+
+    return totalUsers;
+}
 
 /**
  * @returns {number}
@@ -347,6 +574,11 @@ function onMessageHandler(target, context, msg, self) {
     const commandName = msg.trim();
 
     if ('!' === commandName.charAt(0)) {
+        if (config.currentUser === 'Djodjino') {
+            if (commandName === '!go') {
+                messageQueue.push(`Attend Djo, on nourrit les canards.`)
+            }
+        }
         if (config.devMode || (!config.devMode && config.currentUser !== context['display-name'])) {
             let user = context['display-name'];
             instanciateUser(user);
@@ -400,6 +632,8 @@ function updateGuildLevels() {
             guild.level = guildLevel;
         }
     }
+
+    realm.kingLevel = guilds[realm.kingGuild].level;
 
     saveGuilds();
 
@@ -748,14 +982,14 @@ function getUserLevel(user) {
  * @param guild
  * @returns {null}
  */
-function addToGuild(user, guild) {
+function addToGuild(user, guild, keepLevel = false) {
     let previousGuild = null;
 
     for (let jsonGuild in guilds) {
         if (jsonGuild === guild) {
             if (!guilds[jsonGuild].members.includes(user)) {
                 guilds[jsonGuild].members.push(user);
-                updateUserGuild(user, jsonGuild);
+                updateUserGuild(user, jsonGuild, keepLevel);
             }
         } else {
             const index = guilds[jsonGuild].members.indexOf(user);
@@ -775,9 +1009,11 @@ function addToGuild(user, guild) {
  * @param user
  * @param guild
  */
-function updateUserGuild(user, guild) {
+function updateUserGuild(user, guild, keepLevel = false) {
     users[user].guild = guild;
-    users[user].level = 1;
+    if (!keepLevel) {
+        users[user].level = 1;
+    }
 }
 
 /**
