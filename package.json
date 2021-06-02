@@ -1,0 +1,29 @@
+{
+  "name": "djodjibot",
+  "version": "1.0.0",
+  "description": "djodjibot for twitch",
+  "main": "bot.js",
+  "dependencies": {
+    "express": "^4.17.1",
+    "ejs": "^3.1.6",
+    "html": "^1.0.0",
+    "socket.io": "^4.0.2",
+    "socket.io-client": "^4.0.1",
+    "tmi.js": "^1.8.3",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jocelyndubois/djodjibot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jocelyndubois/djodjibot/issues"
+  },
+  "homepage": "https://github.com/jocelyndubois/djodjibot#readme"
+}
