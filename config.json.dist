@@ -1,5 +1,6 @@
 {
   "port": 3000,
+  "nodecgHost": "http://localhost:3200",
   "kingSlayerCost": 1000,
   "kingSlayerNeeded": 10000,
   "devMode" : false,

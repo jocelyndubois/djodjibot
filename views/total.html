@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Events</title>
+    <script
+            src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+            crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="/css/odometer-train.css">
+    <link rel="stylesheet" href="/css/total.css">
+</head>
+<body>
+<div class="odometer">0</div>
+
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/odometer.min.js"></script>
+<script>
+    $(function () {
+        let socket = io();
+        socket.on('updateLevel', function(level) {
+            console.log(level)
+            $('.odometer').html(level)
+        });
+    });
+</script>
+</html>

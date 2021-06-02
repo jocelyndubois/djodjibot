@@ -1,6 +1,5 @@
 const tmi = require('tmi.js');
 const io = require('socket.io-client');
-const socket = io.connect('http://82.65.73.118:3200');
 const fs = require('fs');
 
 var app = require('express')();
@@ -10,13 +9,18 @@ var path = require('path');
 var http = require('http').createServer(app);
 var ioServ = require('socket.io')(http);
 
+const { Random } = require("random-js");
+const random = new Random(); // uses the nativeMath engine
+
 ioServ.on('connection', function(socket){
-    console.log('event page connected.')
+    console.log('page connected.')
 });
 
 app.use(express.static(path.join(__dirname, 'views')));
 
 let config = require('./config.json');
+
+const socket = io.connect(config.nodecgHost);
 
 const guildFile = config.devMode ? './dev/guilds.json' : './jsons/guilds.json';
 const guildFullFile = __dirname + '/' + (config.devMode ? 'dev/' : 'jsons/') + "guilds.json";
@@ -43,6 +47,16 @@ app.get('/generic/', function(req, res){
 
 app.get('/classement/', function(req, res){
     res.sendFile(__dirname + '/views/classement.html');
+});
+
+app.get('/total/', function(req, res){
+    res.sendFile(__dirname + '/views/total.html');
+    setTimeout(function () {
+        ioServ.emit(
+            'updateLevel',
+            countTotalLevels()
+        );
+    }, 1000)
 });
 
 app.get('/events/', function(req, res){
@@ -254,185 +268,7 @@ socket.on(
 socket.on(
     'chaosPotion',
     function (infos) {
-        if (config.devMode || (!config.devMode && config.currentUser !== infos.user)) {
-            instanciateUser(infos.user);
-
-            doBackup();
-            console.log('BACKUP DONE');
-
-            //choose effect
-            let percentage = Math.floor(Math.random() * 100) + 1;
-            console.log(`Dice : ${percentage}`);
-            if (percentage <= 10) {
-                console.log(`20% -> Gain levels`);
-                let user = chooseSomeoneRandom(true);
-                let levelsIncrease = Math.floor(Math.random() * 10) + 1;
-
-                let levelText = 'niveaux'
-                if (1 === levelsIncrease) {
-                    levelText = 'niveau'
-                }
-
-                users[user].level = users[user].level + levelsIncrease;
-                messageQueue.push(`[POTION DE CHANCE] ${user} gagne ${levelsIncrease} ${levelText} (${users[user].level}).`);
-            } else if (20 < percentage && 30 >= percentage) {
-                console.log(`10% -> Lose levels`);
-                let user = chooseSomeoneRandom(true);
-                let levelsIncrease = Math.floor(Math.random() * 10) + 1;
-
-                let newLevel = users[user].level - levelsIncrease;
-                let levelDif = levelsIncrease;
-                if (newLevel < 1) {
-                    newLevel = 1;
-                    levelDif = users[user].level - 1;
-                }
-                users[user].level = newLevel;
-                let levelText = 'niveaux'
-                if (1 === levelDif) {
-                    levelText = 'niveau'
-                }
-
-                messageQueue.push(`[POTION DE TRISTESSE] ${user} perd ${levelDif} ${levelText} (${users[user].level}).`);
-            } else if (40 < percentage && 55 >= percentage) {
-                console.log(`15% -> kingDefense`);
-                let multiplicator = Math.floor(Math.random() * 3) + 1;
-                let multiPop = multiplicator * config.kingSlayerCost;
-                if (!realm.kingSlayer) {
-                    realm.kingSlayer = 0;
-                } else {
-                    realm.kingSlayer = Math.max((realm.kingSlayer - multiPop), 0);
-                }
-
-                messageQueue.push(`[POTION DE PATRIOTISME] La trahison ralentit ${multiplicator} fois (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
-            } else if (55 < percentage && 70 >= percentage) {
-                console.log('15% -> kingSlayer');
-                let multiplicator = Math.floor(Math.random() * 3) + 1;
-                let multiPop = multiplicator * config.kingSlayerCost;
-
-
-                if (!realm.kingSlayer) {
-                    realm.kingSlayer = multiPop;
-                } else {
-                    realm.kingSlayer = realm.kingSlayer + multiPop;
-                }
-
-                if (realm.kingSlayer >= config.kingSlayerNeeded) {
-                    //King is dead.
-                    messageQueue.push(`[POTION D'ANARCHIE] La trahison progresse.`);
-                    messageQueue.push(`Un régicide a eu lieu. ${realm.king} est mort·e.`);
-                    realm.kingSlayer = 0;
-                    realm.kingLevel = 0;
-                    users[realm.king].level = 1;
-                } else {
-                    messageQueue.push(`[POTION D'ANARCHIE] La trahison progresse ${multiplicator} fois (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
-                }
-            } else if (70 < percentage && 85 >= percentage) {
-                console.log('15% -> Changement de guilde');
-                let user = chooseSomeoneRandom(true);
-                let newGuild = chooseGuildRandom();
-
-                if (newGuild === users[user].guild) {
-                    messageQueue.push(`[POTION DE MUTATION] ${user} a été choisi par la potion, mais sa volonté était trop forte, il·elle reste dans sa guilde.`);
-                } else {
-                    addToGuild(user, newGuild, true);
-
-                    messageQueue.push(`[POTION DE MUTATION] ${user} transfert ses connaissance vers la guilde ${guilds[newGuild].longText}.`);
-                }
-            } else if (85 < percentage && 88 >= percentage) {
-                console.log('3% -> PLAGUE');
-                let guild = chooseGuildRandom();
-                let people = guilds[guild].members;
-
-                messageQueue.push(`[POTION DE PESTE] La peste frappe la guilde ${guilds[guild].longText}.`);
-
-
-                people.forEach((member) => {
-                    users[member].level;
-
-                    let levelsDecrease = Math.floor(Math.random() * 5) + 1;
-
-                    let newLevel = users[member].level - levelsDecrease;
-                    let levelDif = levelsDecrease;
-                    if (newLevel < 1) {
-                        newLevel = 1;
-                        levelDif = users[member].level - 1;
-                    }
-                    users[member].level = newLevel;
-                    let levelText = 'niveaux'
-                    if (1 === levelDif) {
-                        levelText = 'niveau'
-                    }
-
-                    messageQueue.push(`[POTION DE PESTE] ${member} perd ${levelDif} ${levelText} (${users[member].level}).`);
-                });
-            } else if ((10 < percentage && 20 >= percentage) || (88 < percentage && 95 >= percentage) || (33 < percentage && 40 >= percentage)) {
-                console.log('24% -> level Rain');
-                for (let i = 0; i < 10; i++) {
-                    let user = chooseSomeoneRandom(true);
-                    let levelsIncrease = Math.floor(Math.random() * 10) + 1;
-
-                    let levelText = 'niveaux'
-                    if (1 === levelsIncrease) {
-                        levelText = 'niveau'
-                    }
-
-                    users[user].level = users[user].level + levelsIncrease;
-                    messageQueue.push(`[POTION DE NOËL] ${user} gagne ${levelsIncrease} ${levelText} (${users[user].level}).`);
-                }
-            }  else if (95 < percentage || (30 < percentage && 33 >= percentage)) {
-                console.log('8% -> Shuffle EVERYTHING');
-                let totalLevels = countTotalLevels();
-                let totalUsers = countTotalUsers();
-                console.log('[SHUFFLE] Total levels: '+ totalLevels);
-
-                realm.king = '';
-                realm.kingLevel = 0;
-
-                let usersArr = [];
-                for (user in users) {
-                    if (users[user].guild != "") {
-                        usersArr.push(user);
-                    }
-                }
-                shuffle(usersArr);
-
-                let counter = 1;
-                let remainingLevels = totalLevels - totalUsers;
-                usersArr.forEach(function (item, index) {
-                    if (counter === totalUsers) {
-                        users[item].level = 1 + remainingLevels;
-                        console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
-                    } else {
-                        if (remainingLevels > 0) {
-                            let levelLimit = Math.floor(remainingLevels/3);
-                            let levelToAdd = Math.floor(Math.random() * (remainingLevels + 1));
-                            levelToAdd = Math.min(levelLimit, levelToAdd);
-                            users[item].level = 1 + levelToAdd;
-                            remainingLevels -= levelToAdd;
-                            console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
-                        } else {
-                            users[item].level = 1;
-                            console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
-                        }
-                    }
-
-                    let guild = chooseGuildRandom();
-                    addToGuild(item, guild, true);
-                    console.log(`[SHUFFLE] ${item} - Guilde ${users[item].guild}`);
-
-                    counter++;
-                });
-
-                messageQueue.push(`[POTION DE CHAOS] Peut être devrierez vous vérifier votre état ?`);
-            }
-        }
-
-        updateGuildMasters();
-        updateGuildLevels();
-
-        saveGuilds();
-        saveUsers();
-        saveRealm();
+        randomPotion(infos);
     }
 );
 
@@ -443,7 +279,7 @@ socket.on(
             instanciateUser(infos.user);
 
             let user = chooseSomeoneRandom(true);
-            let levelsIncrease = Math.floor(Math.random() * 10) + 1;
+            let levelsIncrease = random.integer(1, 10);
 
             users[user].level = users[user].level + levelsIncrease;
             messageQueue.push(`Un grub a été sauvé (${infos.total}/46), papa grub donne ${levelsIncrease} niveaux à ${user}.`);
@@ -467,7 +303,7 @@ socket.on(
             messageQueue.push(`BRAVO !! Papa grub a retrouvé tout ses petits, ils vous remercie abondamment !!!`)
             for (let i = 0; i < 10; i++) {
                 let user = chooseSomeoneRandom(true);
-                let levelsIncrease = Math.floor(Math.random() * 10) + 1;
+                let levelsIncrease = random.integer(1, 10);
 
                 let levelText = 'niveaux'
                 if (1 === levelsIncrease) {
@@ -488,13 +324,280 @@ socket.on(
     }
 );
 
+function randomPotion(infos) {
+    if (config.devMode || (!config.devMode && config.currentUser !== infos.user)) {
+        instanciateUser(infos.user);
+
+        doBackup();
+        console.log('BACKUP DONE');
+
+        //choose effect
+        let percentage = random.integer(1, 100);
+        console.log(`Dice : ${percentage}`);
+        if (percentage <= 5) {
+            console.log('5% -> Shuffle EVERYTHING');
+            chaosPotion();
+        } else if (5 < percentage && 13 >= percentage) {
+            console.log(`8% -> equality`);
+            equalityPotion();
+        } else if (13 < percentage && 28 >= percentage) {
+            console.log(`15% -> transmutation`);
+            transmutationPotion();
+        } else if (28 < percentage && 43 >= percentage) {
+            console.log('15% -> Changement de guilde');
+            mutationPotion();
+        } else if (43 < percentage && 58 >= percentage) {
+            console.log('15% -> PLAGUE');
+            plaguePotion();
+        } else if (58 < percentage && 75 >= percentage) {
+            console.log(`17% -> king vampirism`);
+            kingVampirismePotion();
+        }  else if (75 < percentage) {
+            console.log('25% -> level Rain');
+            christmasPotion();
+        }
+    }
+
+    updateGuildMasters();
+    updateGuildLevels();
+
+    saveGuilds();
+    saveUsers();
+    saveRealm();
+}
+
+function kingVampirismePotion() {
+    let vampir = chooseSomeoneRandom(true);
+    while (vampir === realm.king) {
+        vampir = chooseSomeoneRandom(true);
+    }
+    let levelSteal = random.integer(1, 10);
+    levelSteal = Math.min(levelSteal, (users[realm.king].level - 1));
+
+    let oldVampireLevel = users[vampir].level;
+    let oldKingLevel = users[realm.king].level;
+
+    let levelText = 'niveaux'
+    if (1 === levelSteal) {
+        levelText = 'niveau'
+    }
+
+    realm.kingLevel -= levelSteal;
+    users[realm.king].level -= levelSteal;
+    users[vampir].level += levelSteal;
+
+    messageQueue.push(`[POTION DE VAMPIRISME ROYAL] ${vampir} (${oldVampireLevel} -> ${users[vampir].level}) absorbe la force royale de ${realm.king} (${oldKingLevel} -> ${users[realm.king].level}) et lui vole ${levelSteal} ${levelText}.`);
+}
+
+function equalityPotion() {
+    let totalLevels = countTotalLevels();
+    let totalUsers = countTotalUsers();
+    console.log('[EQUALITY] Total levels: '+ totalLevels);
+
+    realm.king = '';
+    realm.kingLevel = -1;
+
+    let equalLevels = Math.floor(totalLevels / totalUsers);
+
+    for (user in users) {
+        users[user].level = equalLevels;
+    }
+
+    messageQueue.push(`[POTION D'EGALITE] Le royaume se partage équitablement les niveaux.`);
+}
+
+function transmutationPotion() {
+    let user1 = chooseSomeoneRandom(true);
+    let user2 = chooseSomeoneRandom(true);
+    while (user1 === user2) {
+        user2 = chooseSomeoneRandom(true);
+    }
+
+    let user1Level = users[user1].level;
+    let user2Level = users[user2].level;
+
+    users[user1].level = user2Level;
+    users[user2].level = user1Level;
+
+    messageQueue.push(`[POTION DE TRANSMUTATION] ${user1} (${user1Level} -> ${user2Level}) et ${user2} (${user2Level} -> ${user1Level}) échangent leurs forces.`);
+}
+
+function luckPotion() {
+    let user = chooseSomeoneRandom(true);
+    let levelsIncrease = random.integer(1, 10);
+
+    let levelText = 'niveaux'
+    if (1 === levelsIncrease) {
+        levelText = 'niveau'
+    }
+
+    users[user].level = users[user].level + levelsIncrease;
+    messageQueue.push(`[POTION DE CHANCE] ${user} gagne ${levelsIncrease} ${levelText} (${users[user].level}).`);
+}
+
+function sadnessPotion() {
+    let user = chooseSomeoneRandom(true);
+    let levelsIncrease = random.integer(1, 10);
+
+    let newLevel = users[user].level - levelsIncrease;
+    let levelDif = levelsIncrease;
+    if (newLevel < 1) {
+        newLevel = 1;
+        levelDif = users[user].level - 1;
+    }
+    users[user].level = newLevel;
+    let levelText = 'niveaux'
+    if (1 === levelDif) {
+        levelText = 'niveau'
+    }
+
+    messageQueue.push(`[POTION DE TRISTESSE] ${user} perd ${levelDif} ${levelText} (${users[user].level}).`);
+}
+
+function patriotPotion() {
+    let multiplicator = random.integer(1, 3);
+    let multiPop = multiplicator * config.kingSlayerCost;
+    if (!realm.kingSlayer) {
+        realm.kingSlayer = 0;
+    } else {
+        realm.kingSlayer = Math.max((realm.kingSlayer - multiPop), 0);
+    }
+
+    messageQueue.push(`[POTION DE PATRIOTISME] La trahison ralentit ${multiplicator} fois (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
+}
+
+function anarchyPotion() {
+    let multiplicator = random.integer(1, 3);
+    let multiPop = multiplicator * config.kingSlayerCost;
+
+
+    if (!realm.kingSlayer) {
+        realm.kingSlayer = multiPop;
+    } else {
+        realm.kingSlayer = realm.kingSlayer + multiPop;
+    }
+
+    if (realm.kingSlayer >= config.kingSlayerNeeded) {
+        //King is dead.
+        messageQueue.push(`[POTION D'ANARCHIE] La trahison progresse.`);
+        messageQueue.push(`Un régicide a eu lieu. ${realm.king} est mort·e.`);
+        realm.kingSlayer = 0;
+        realm.kingLevel = 0;
+        users[realm.king].level = 1;
+    } else {
+        messageQueue.push(`[POTION D'ANARCHIE] La trahison progresse ${multiplicator} fois (${realm.kingSlayer}/${config.kingSlayerNeeded}).`);
+    }
+}
+
+function mutationPotion() {
+    let user = chooseSomeoneRandom(true);
+    let newGuild = chooseGuildRandom();
+
+    if (newGuild === users[user].guild) {
+        messageQueue.push(`[POTION DE MUTATION] ${user} a été choisi par la potion, mais sa volonté était trop forte, il·elle reste dans sa guilde.`);
+    } else {
+        addToGuild(user, newGuild, true);
+
+        messageQueue.push(`[POTION DE MUTATION] ${user} transfert ses connaissance vers la guilde ${guilds[newGuild].longText}.`);
+    }
+}
+
+function plaguePotion() {
+    let guild = chooseGuildRandom();
+    let people = guilds[guild].members;
+
+    messageQueue.push(`[POTION DE PESTE] La peste frappe la guilde ${guilds[guild].longText}.`);
+
+
+    people.forEach((member) => {
+        users[member].level;
+
+        let levelsDecrease = random.integer(1, 5);
+
+        let newLevel = users[member].level - levelsDecrease;
+        let levelDif = levelsDecrease;
+        if (newLevel < 1) {
+            newLevel = 1;
+            levelDif = users[member].level - 1;
+        }
+        users[member].level = newLevel;
+        let levelText = 'niveaux'
+        if (1 === levelDif) {
+            levelText = 'niveau'
+        }
+
+        messageQueue.push(`[POTION DE PESTE] ${member} perd ${levelDif} ${levelText} (${users[member].level}).`);
+    });
+}
+
+function christmasPotion() {
+    for (let i = 0; i < 10; i++) {
+        let user = chooseSomeoneRandom(true);
+        let levelsIncrease = random.integer(1, 10);
+
+        let levelText = 'niveaux'
+        if (1 === levelsIncrease) {
+            levelText = 'niveau'
+        }
+
+        users[user].level = users[user].level + levelsIncrease;
+        messageQueue.push(`[POTION DE NOËL] ${user} gagne ${levelsIncrease} ${levelText} (${users[user].level}).`);
+    }
+}
+
+function chaosPotion() {
+    let totalLevels = countTotalLevels();
+    let totalUsers = countTotalUsers();
+    console.log('[SHUFFLE] Total levels: '+ totalLevels);
+
+    realm.king = '';
+    realm.kingLevel = -1;
+
+    let usersArr = [];
+    for (user in users) {
+        if (users[user].guild != "") {
+            usersArr.push(user);
+        }
+    }
+    shuffle(usersArr);
+
+    let counter = 1;
+    let remainingLevels = totalLevels - totalUsers;
+    usersArr.forEach(function (item, index) {
+        if (counter === totalUsers) {
+            users[item].level = 1 + remainingLevels;
+            console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
+        } else {
+            if (remainingLevels > 0) {
+                let levelLimit = Math.floor(remainingLevels/3);
+                let levelToAdd = random.integer(1, remainingLevels);
+                levelToAdd = Math.min(levelLimit, levelToAdd);
+                users[item].level = 1 + levelToAdd;
+                remainingLevels -= levelToAdd;
+                console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
+            } else {
+                users[item].level = 1;
+                console.log(`[SHUFFLE] ${item} - Niveau ${users[item].level}`);
+            }
+        }
+
+        let guild = chooseGuildRandom();
+        addToGuild(item, guild, true);
+        console.log(`[SHUFFLE] ${item} - Guilde ${users[item].guild}`);
+
+        counter++;
+    });
+
+    messageQueue.push(`[POTION DE CHAOS] Peut être devrierez vous vérifier votre état ?`);
+}
+
 function shuffle(array) {
     array.sort(() => Math.random() - 0.5);
 }
 
 function chooseGuildRandom() {
     let guildsList = ['water', 'earth', 'fire', 'air', 'light', 'darkness']
-    let newGuildId = Math.floor(Math.random() * 6);
+    let newGuildId = random.integer(0, 5);
 
     return guildsList[newGuildId];
 }
@@ -525,7 +628,7 @@ function countTotalUsers() {
  * @returns {number}
  */
 function generateNumberOfLevel() {
-    let percentage = Math.floor(Math.random() * 100) + 1;
+    let percentage = random.integer(1, 100);
 
     if (percentage <= 70) {
         //70% -> 1
@@ -579,35 +682,38 @@ function onMessageHandler(target, context, msg, self) {
                 messageQueue.push(`Attend Djo, on nourrit les canards.`)
             }
         }
-        if (config.devMode || (!config.devMode && config.currentUser !== context['display-name'])) {
-            let user = context['display-name'];
-            instanciateUser(user);
 
-            // If the command is known, let's execute it
-            if (commandName === '!guilde') {
-                getStatsOfUser(user);
-            } else if (commandName === '!eau') {
-                getStatsOfGuild('water');
-            } else if (commandName === '!feu') {
-                getStatsOfGuild('fire');
-            } else if (commandName === '!terre') {
-                getStatsOfGuild('earth');
-            } else if (commandName === '!air') {
-                getStatsOfGuild('air');
-            } else if (commandName === '!lumière') {
-                getStatsOfGuild('light');
-            } else if (commandName === '!ténèbres') {
-                getStatsOfGuild('darkness');
-            } else if (commandName === '!roi') {
-                displayKing();
-            } else if (commandName === '!complot') {
-                displayComplot();
+        let user = context['display-name'];
+        if (config.devMode || (!config.devMode && config.currentUser !== context['display-name'])) {
+            instanciateUser(user);
+        }
+
+        // If the command is known, let's execute it
+        if (commandName === '!guilde') {
+            getStatsOfUser(user);
+        } else if (commandName === '!eau') {
+            getStatsOfGuild('water');
+        } else if (commandName === '!feu') {
+            getStatsOfGuild('fire');
+        } else if (commandName === '!terre') {
+            getStatsOfGuild('earth');
+        } else if (commandName === '!air') {
+            getStatsOfGuild('air');
+        } else if (commandName === '!lumière') {
+            getStatsOfGuild('light');
+        } else if (commandName === '!ténèbres') {
+            getStatsOfGuild('darkness');
+        } else if (commandName === '!roi') {
+            displayKing();
+        } else if (commandName === '!complot') {
+            displayComplot();
+        } else if (commandName === '!royaume') {
+            displayRoyaume();
+        } else {
+            if (userExist(commandName.substring(1))) {
+                getStatsOfUser(commandName.substring(1));
             } else {
-                if (userExist(commandName.substring(1))) {
-                    getStatsOfUser(commandName.substring(1));
-                } else {
-                    console.log(`* Unknown command ${commandName}`);
-                }
+                console.log(`* Unknown command ${commandName}`);
             }
         }
     }
@@ -633,7 +739,9 @@ function updateGuildLevels() {
         }
     }
 
-    realm.kingLevel = guilds[realm.kingGuild].level;
+    if (realm.kingLevel !== -1) {
+        realm.kingLevel = guilds[realm.kingGuild].level;
+    }
 
     saveGuilds();
 
@@ -728,7 +836,7 @@ function isPoisonPossible(poisoner) {
  */
 function chooseSomeoneRandom(soft = false) {
     let totalUsers = Object.keys(users).length;
-    let key = Math.floor(Math.random() * totalUsers);
+    let key = random.integer(0, totalUsers);
 
     let counter = 0;
     for (user in users) {
@@ -886,6 +994,12 @@ function displayComplot() {
     }
 }
 
+function displayRoyaume() {
+    let totalLevels = countTotalLevels();
+    let totalUsers = countTotalUsers();
+    messageQueue.push(`Niveau du royaume : ${totalLevels} / Nombre d'habitant·e·s : ${totalUsers}`);
+}
+
 /**
  * Print a message explaining the current status (master etc) of the specified guild.
  *
@@ -896,26 +1010,6 @@ function getStatsOfGuild(guildName) {
     let guild = guilds[guildName];
     if (guild.master) {
         message = `La guilde est dirigée par ${guild.master} (${users[guild.master].level})`
-        // switch (guildName) {
-        //     case 'water':
-        //         message = `Depuis sa citée engloutie, ${guild.master} le bras droit de Poséidon dirige la guilde de l'eau.`
-        //         break;
-        //     case 'earth':
-        //         message = `Au sommet de la plus haute montagne du continent, trône le·la puissant·e ${guild.master}, le·la grand·e Maître·sse de la guilde de la terre.`
-        //         break;
-        //     case 'fire':
-        //         message = `Dans sa forge au centre d'un volcan, ${guild.master} le·la vieux·ielle forgeron·ne des dieux règne sur la guilde du feu.`
-        //         break;
-        //     case 'air':
-        //         message = `Loin au dessus de la terre, perché dans les nuages, ${guild.master} l'Avatar observe la vie terrestre avec curiosité.`
-        //         break;
-        //     case 'light':
-        //         message = `Réfugié sur le soleil depuis des siècles, loin des troubles de la vie humaine, ${guild.master} le·la puissant·te règne sans partage sur la guilde de la lumière.`
-        //         break;
-        //     case 'darkness':
-        //         message = `Caché au fond d'un gouffre sans fond sur la lointaine planète Mars, ${guild.master} le·la terrifiant·e règne sur les morts et la guilde des ténèbres.`
-        //         break;
-        // }
 
         let members = guild.members.length - 1;
         if (members === 1) {
@@ -1066,6 +1160,11 @@ function saveUsers(backup = false) {
             return console.log(err);
         }
     });
+
+    ioServ.emit(
+        'updateLevel',
+        countTotalLevels()
+    );
 }
 
 /**
