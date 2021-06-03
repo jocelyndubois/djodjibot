@@ -540,7 +540,7 @@ function christmasPotion() {
             levelText = 'niveau'
         }
 
-        users[user].level = users[user].level + levelsIncrease;
+        users[user].level += levelsIncrease;
         messageQueue.push(`[POTION DE NOËL] ${user} gagne ${levelsIncrease} ${levelText} (${users[user].level}).`);
     }
 }
@@ -836,7 +836,7 @@ function isPoisonPossible(poisoner) {
  */
 function chooseSomeoneRandom(soft = false) {
     let totalUsers = Object.keys(users).length;
-    let key = random.integer(0, totalUsers);
+    let key = random.integer(0, (totalUsers - 1));
 
     let counter = 0;
     for (user in users) {
