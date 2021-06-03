@@ -60,6 +60,7 @@ app.get('/realm/ranking/', function(req, res){
         }
     }
     usersToExport.sort( compare );
+    res.setHeader('Content-Type', 'application/json');
     res.json(usersToExport);
 });
 
