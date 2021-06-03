@@ -770,7 +770,7 @@ function updateKing() {
         }
     }
 
-    if (bestGuild.level > realm.kingLevel) {
+    if (bestGuild.level > realm.kingLevel || (bestGuild.guild === realm.kingGuild && bestGuild.master !== realm.king)) {
         let oldKing = {
             "king": realm.king,
             "guild": realm.kingGuild
