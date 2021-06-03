@@ -49,6 +49,30 @@ app.get('/classement/', function(req, res){
     res.sendFile(__dirname + '/views/classement.html');
 });
 
+app.get('/realm/ranking/', function(req, res){
+    let usersToExport = [];
+    let usersClone = JSON.parse(JSON.stringify(users));
+    for (let u in usersClone) {
+        if (usersClone[u].guild !== "" && usersClone[u].level > 0) {
+            usersClone[u].user = u;
+            usersClone[u].guild = guilds[usersClone[u].guild].text;
+            usersToExport.push(usersClone[u]);
+        }
+    }
+    usersToExport.sort( compare );
+    res.json(usersToExport);
+});
+
+function compare( a, b ) {
+    if ( a.level > b.level ){
+        return -1;
+    }
+    if ( a.level < b.level ){
+        return 1;
+    }
+    return 0;
+}
+
 app.get('/total/', function(req, res){
     res.sendFile(__dirname + '/views/total.html');
     setTimeout(function () {

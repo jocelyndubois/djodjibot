@@ -228,56 +228,6 @@
                 }
             }
         }
-
-        /*
-        let realmDiv = document.getElementById('the-end');
-        let king = document.getElementById('king');
-        let population = document.getElementById('total-players');
-        king.innerHTML = realm.king;
-
-        if (realm.name) {
-            realmDiv.innerHTML = realm.name;
-        }
-
-        let popCount = 0;
-        for (let u in users) {
-            popCount++;
-        }
-        population.innerHTML = popCount;
-
-        for (let g in guilds) {
-            let elementDl = document.getElementById(g + '-dl');
-            let master = document.getElementById(g + '-master');
-            let masterlevel = document.getElementById(g + '-master-level');
-            if ("" != guilds[g].master) {
-                master.innerHTML = guilds[g].master;
-                masterlevel.innerHTML = users[guilds[g].master].level;
-            }
-
-            let people = guilds[g].members;
-            let counter = 1;
-            people.forEach((member) => {
-                if (member !== guilds[g].master) {
-                    let userDt = document.createElement('dt');
-                    let userDd = document.createElement('dd');
-
-                    let textDt = document.createTextNode('Disciple ' + counter);
-                    userDt.appendChild(textDt);
-
-                    let textDd = document.createTextNode(member + ' (Niveau ' + users[member].level + ")");
-                    userDd.appendChild(textDd);
-
-                    elementDl.appendChild(userDt);
-                    elementDl.appendChild(userDd);
-
-                    counter++;
-                }
-            });
-        }
-
-
-        launchGeneric();
-        */
     }
 
 
