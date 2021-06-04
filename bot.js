@@ -41,9 +41,9 @@ if (config.ssl.enabled) {
         cert: fs.readFileSync(config.ssl.cert)
     };
 
-    https.createServer(options, app).listen(config.ssl.port);
+    let server = https.createServer(options, app).listen(config.port);
 
-    ioServ = require('socket.io')(https);
+    ioServ = require('socket.io')(server);
 } else {
     http.listen(config.port, function(){
         console.log('listening on *:' + config.port);
