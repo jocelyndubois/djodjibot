@@ -4,17 +4,13 @@ const fs = require('fs');
 
 var app = require('express')();
 var express = require('express');
+const https = require('https');
 var path = require('path');
 
 var http = require('http').createServer(app);
-var ioServ = require('socket.io')(http);
 
 const { Random } = require("random-js");
 const random = new Random(); // uses the nativeMath engine
-
-ioServ.on('connection', function(socket){
-    console.log('page connected.')
-});
 
 app.use(express.static(path.join(__dirname, 'views')));
 
@@ -37,8 +33,27 @@ const realmFullFile = __dirname + '/' + (config.devMode ? 'dev/' : 'jsons/') + "
 const backupRealmFile = './backup/realm.json';
 let realm = require(realmFile);
 
-http.listen(config.port, function(){
-    console.log('listening on *:' + config.port);
+let ioServ = null;
+
+if (config.ssl.enabled) {
+    const options = {
+        key: fs.readFileSync(config.ssl.key),
+        cert: fs.readFileSync(config.ssl.cert)
+    };
+
+    https.createServer(options, app).listen(config.ssl.port);
+
+    ioServ = require('socket.io')(https);
+} else {
+    http.listen(config.port, function(){
+        console.log('listening on *:' + config.port);
+    });
+
+    ioServ = require('socket.io')(http);
+}
+
+ioServ.on('connection', function(socket){
+    console.log('page connected.')
 });
 
 app.get('/generic/', function(req, res){
