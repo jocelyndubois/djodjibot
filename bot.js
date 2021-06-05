@@ -375,26 +375,29 @@ function randomPotion(infos) {
         //choose effect
         let percentage = random.integer(1, 100);
         console.log(`Dice : ${percentage}`);
-        if (percentage <= 5) {
-            console.log('5% -> Shuffle EVERYTHING');
-            chaosPotion();
-        } else if (5 < percentage && 13 >= percentage) {
-            console.log(`8% -> equality`);
+        if (percentage <= 2) {
+            //2
             equalityPotion();
-        } else if (13 < percentage && 28 >= percentage) {
-            console.log(`15% -> transmutation`);
+        } else if (2 < percentage && 4 >= percentage) {
+            //2
             transmutationPotion();
-        } else if (28 < percentage && 43 >= percentage) {
-            console.log('15% -> Changement de guilde');
-            mutationPotion();
-        } else if (43 < percentage && 58 >= percentage) {
-            console.log('15% -> PLAGUE');
+        } else if (4 < percentage && 9 >= percentage) {
+            //5
+            royalLoosePotion();
+        } else if (9 < percentage && 14 >= percentage) {
+            //5
+            royalAddPotion();
+        } else if (14 < percentage && 27 >= percentage) {
+            //13
             plaguePotion();
-        } else if (58 < percentage && 75 >= percentage) {
-            console.log(`17% -> king vampirism`);
+        } else if (27 < percentage && 45 >= percentage) {
+            //18
             kingVampirismePotion();
-        }  else if (75 < percentage) {
-            console.log('25% -> level Rain');
+        }  else if (45 < percentage && 70 >= percentage) {
+            //25
+            guildAddPotion();
+        }  else if (70 < percentage) {
+            //30
             christmasPotion();
         }
     }
@@ -568,6 +571,85 @@ function plaguePotion() {
         }
 
         messageQueue.push(`[POTION DE PESTE] ${member} perd ${levelDif} ${levelText} (${users[member].level}).`);
+    });
+}
+
+function royalLoosePotion() {
+    let guild = realm.kingGuild;
+    let people = guilds[guild].members;
+
+    messageQueue.push(`[GUILLOTINE]  Chaque membre de la guilde du roi perd des niveaux.`);
+
+
+    people.forEach((member) => {
+        users[member].level;
+
+        let levelsDecrease = random.integer(1, 5);
+
+        let newLevel = users[member].level - levelsDecrease;
+        let levelDif = levelsDecrease;
+        if (newLevel < 1) {
+            newLevel = 1;
+            levelDif = users[member].level - 1;
+        }
+        users[member].level = newLevel;
+        let levelText = 'niveaux'
+        if (1 === levelDif) {
+            levelText = 'niveau'
+        }
+
+        messageQueue.push(`[GUILLOTINE] ${member} perd ${levelDif} ${levelText} (${users[member].level}).`);
+    });
+}
+
+function royalAddPotion() {
+    let guild = realm.kingGuild;
+    let people = guilds[guild].members;
+
+    messageQueue.push(`[POTION ROYALE] Chaque membre de la guilde du roi gagne des niveaux.`);
+
+    people.forEach((member) => {
+        users[member].level;
+
+        let levelsIncrease = random.integer(1, 10);
+
+        users[member].level += levelsIncrease;
+        let levelText = 'niveaux'
+        if (1 === levelDif) {
+            levelText = 'niveau'
+        }
+
+        messageQueue.push(`[POTION ROYALE] ${member} gagne ${levelsIncrease} ${levelText} (${users[member].level}).`);
+    });
+}
+
+function guildAddPotion() {
+    let guild = chooseGuildRandom();
+    let people = guilds[guild].members;
+
+    let potionNames = {
+        'water': 'AQUA POTION',
+        'earth': 'POTION DE FERTILITÉ',
+        'fire': 'POTION DE CHALEUR',
+        'air': 'POTION FUMIGÈNE',
+        'light': 'POTION LUMINEUSE',
+        'darkness': 'POTION OMBRAGEUSE',
+    }
+
+    messageQueue.push(`[${potionNames[guild]}] Chaque membre de la guilde ${guilds[guild].longText} gagne des niveaux.`);
+
+    people.forEach((member) => {
+        users[member].level;
+
+        let levelsIncrease = random.integer(1, 10);
+
+        users[member].level += levelsIncrease;
+        let levelText = 'niveaux'
+        if (1 === levelDif) {
+            levelText = 'niveau'
+        }
+
+        messageQueue.push(`[${potionNames[guild]}] ${member} gagne ${levelsIncrease} ${levelText} (${users[member].level}).`);
     });
 }
 
