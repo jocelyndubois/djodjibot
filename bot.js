@@ -615,7 +615,7 @@ function royalAddPotion() {
 
         users[member].level += levelsIncrease;
         let levelText = 'niveaux'
-        if (1 === levelDif) {
+        if (1 === levelsIncrease) {
             levelText = 'niveau'
         }
 
@@ -645,7 +645,7 @@ function guildAddPotion() {
 
         users[member].level += levelsIncrease;
         let levelText = 'niveaux'
-        if (1 === levelDif) {
+        if (1 === levelsIncrease) {
             levelText = 'niveau'
         }
 
